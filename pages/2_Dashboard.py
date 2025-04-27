@@ -36,7 +36,35 @@ if "df" in st.session_state and st.session_state.df is not None:
 else:
     st.warning("⚠️ No hay datos cargados. Ve a la página de inicio y sube un archivo CSV.")
 
+st.subheader("Parámetros de Alarmas")
+st.write("Configura los parámetros para la detección de alarmas en el monitoreo eléctrico.")
 
+# Verificar si existe configuración guardada
+if "configuracion_alarmas" in st.session_state:
+    config = st.session_state["configuracion_alarmas"]
+    
+    # Puedes usar los valores así:
+    limite_superior_voltaje = config["limite_superior_v"]
+    valor_nominal_voltaje = config["valor_nominal_v"]
+    limite_inferior_voltaje = config["limite_inferior_v"]
+
+    valor_nominal_corriente = config["umbral_corriente"]
+
+    umbral_factor_potencia = config["umbral_factor_potencia"]
+    desbalance_moderado_v = config["desbalance_moderado_v"]
+    desbalance_critico_v = config["desbalance_critico_v"]
+    desbalance_moderado_i = config["desbalance_moderado_i"]
+    desbalance_critico_i = config["desbalance_critico_i"]
+
+    # Ahora puedes usarlos en tus gráficos, alertas, lógicas, etc.
+    st.write(f"⚡ Límite superior voltaje: {limite_superior_voltaje} V")
+    st.write(f"⚡ Límite inferior voltaje: {limite_inferior_voltaje} V")
+    st.write(f"⚡ Valor nominal voltaje: {valor_nominal_voltaje} V")
+    st.write(f"🔥 Umbral corriente: {valor_nominal_corriente} A")
+    st.write(f"🔥 Umbral factor potencia: {umbral_factor_potencia}")
+
+else:
+    st.warning("⚠️ No hay configuración de alarmas guardada todavía. Configúrala primero.")
 
 
 
@@ -59,52 +87,116 @@ with st.container():
             df_voltajes = df[df["Date"] == fecha_seleccionada].copy()
             df_voltajes = df_voltajes[df_voltajes["Datetime"].notna()]  # Evita NaT en eje X
 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            # Variables que controlan las líneas horizontales
+            limite_superior_voltaje = 273  # Var1
+            valor_nominal_voltaje = 260    # Var2
+            limite_inferior_voltaje = 247  # Var3
 
-            # Graficar en Seaborn sin margen de error
-            sns.lineplot(data=df_voltajes, x="Datetime", y="U1_rms_AVG", ax=ax, errorbar=None, color="b", linewidth=2, label="U1")
-            sns.lineplot(data=df_voltajes, x="Datetime", y="U2_rms_AVG", ax=ax, errorbar=None, color="r", linewidth=2, label="U2")
-            sns.lineplot(data=df_voltajes, x="Datetime", y="U3_rms_AVG", ax=ax, errorbar=None, color="g", linewidth=2, label="U3")
+            # Lista de columnas que quieres graficar
+            columnas_a_graficar = ["U1_rms_AVG", "U2_rms_AVG", "U3_rms_AVG"]
 
-            # Título y ejes
-            ax.set_title("Medida del voltaje promedio", fontsize=16, fontweight="bold")
-            ax.set_xlabel("Hora", fontsize=14)
-            ax.set_ylabel("Voltajes L-N (V)", fontsize=14)
+            # Colores personalizados para cada línea
+            colores_voltaje = {
+                "U1_rms_AVG": "blue",
+                "U2_rms_AVG": "red",
+                "U3_rms_AVG": "green",
+            }
 
-            # Establecer límites del eje X para evitar ticks excesivos
-            x_min = df_voltajes["Datetime"].min()
-            x_max = df_voltajes["Datetime"].max()
-            ax.set_xlim([x_min, x_max])
+            # Crear figura
+            fig_voltaje = go.Figure()
 
-            # Ticks controlados por hora
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            plt.xticks(rotation=45)
+            # Añadir una línea por cada columna
+            for columna in columnas_a_graficar:
+                fig_voltaje.add_trace(go.Scatter(
+                    x=df_voltajes["Datetime"],
+                    y=df_voltajes[columna],
+                    mode='lines',
+                    name=columna.replace("_rms_AVG", ""),  # Opcional: limpia el nombre para mostrar bonito
+                    line=dict(color=colores_voltaje.get(columna, 'black'), width=2)
+                ))
+            # Añadir las tres líneas horizontales
+            fig_voltaje.update_layout(
+                shapes=[
+                    dict(type="line", xref="paper", x0=0, x1=1, yref="y", y0=limite_superior_voltaje, y1=limite_superior_voltaje,
+                        line=dict(color="red", width=4, dash="dash")),
+                    dict(type="line", xref="paper", x0=0, x1=1, yref="y", y0=valor_nominal_voltaje, y1=valor_nominal_voltaje,
+                        line=dict(color="grey", width=4, dash="dash")),
+                    dict(type="line", xref="paper", x0=0, x1=1, yref="y", y0=limite_inferior_voltaje, y1=limite_inferior_voltaje,
+                        line=dict(color="blue", width=4, dash="dash")),
+                ],
+                annotations=[
+                    dict(
+                        x=1.005, y=limite_superior_voltaje,
+                        xref='paper', yref='y',
+                        text='Límite Superior',
+                        showarrow=False,
+                        font=dict(color="red", size=12),
+                        xanchor='left'
+                    ),
+                    dict(
+                        x=1.005, y=valor_nominal_voltaje,
+                        xref='paper', yref='y',
+                        text='Valor Nominal',
+                        showarrow=False,
+                        font=dict(color="grey", size=12),
+                        xanchor='left'
+                    ),
+                    dict(
+                        x=1.005, y=limite_inferior_voltaje,
+                        xref='paper', yref='y',
+                        text='Límite Inferior',
+                        showarrow=False,
+                        font=dict(color="blue", size=12),
+                        xanchor='left'
+                    ),
+                ]
+            )
 
-            # Línea horizontal punteada dinámica nominal
-            voltaje_nominal = 260
-            ax.axhline(y=voltaje_nominal, color='grey', linestyle='--', linewidth=2)
-            ax.axhline(y=voltaje_nominal * 1.05, color='red', linestyle='--', linewidth=2)
-            ax.axhline(y=voltaje_nominal * 0.95, color='blue', linestyle='--', linewidth=2)
+            # Configurar el layout (títulos, ejes, grid, etc.)
+            fig_voltaje.update_layout(
+                title="Gráfica Voltaje Promedio",
+                xaxis_title="Fecha y Hora",
+                yaxis_title="Voltaje (V)",
+                xaxis=dict(
+                    tickformat="%H:%M",
+                    tickmode="auto",
+                    nticks=24,  # Aproximadamente 1 tick por hora si es un día
+                    showgrid=True,
+                    gridcolor="lightgrey",
+                    tickangle=45  # Rotar las etiquetas
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor="lightgrey"
+                ),
+                legend=dict(
+                    title="Medidas",
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                margin=dict(l=40, r=120, t=80, b=40),
+                height=600,
+                template="simple_white"
+            )
 
-            # Estética
-            ax.grid(True, linestyle="--", alpha=0.6)
-            ax.legend(title="Fases", loc="upper right")
-
-            # Mostrar gráfico
-            st.pyplot(fig)
+            # Mostrar en Streamlit o en notebook
+            # Para Streamlit:
+            st.plotly_chart(fig_voltaje, use_container_width=True)
             filtro_placeholder = st.empty()
         
         with desbalance_col:
-            st.write("Desbalance devoltajes")
+            st.write("Desbalance de voltajes")
             # Obtener el valor actual del desbalance desde el DataFrame
             valor_desbalance = df_voltajes["Uunb_AVG"].mean()  # Promedio de desbalance
 
             # Elegir color según nivel de desbalance
-            if valor_desbalance < 5:
+            if valor_desbalance < desbalance_moderado_v:
                 color = "#90EE90"  # verde claro
                 texto_estado = "Normal"
-            elif valor_desbalance < 10:
+            elif valor_desbalance < desbalance_critico_v:
                 color = "#FFD700"  # dorado
                 texto_estado = "Moderado"
             else:
@@ -162,7 +254,7 @@ with st.container():
             }, index=["99%","95%","90%"])
 
             # Estilizar la tabla para resaltar valores mayores a 260 V
-            styled_df_voltajes = df_tabla_voltajes.style.applymap(lambda x: "background-color: yellow" if x > 260*1.05 else "")
+            styled_df_voltajes = df_tabla_voltajes.style.applymap(lambda x: "background-color: yellow" if x > limite_superior_voltaje else "")
             # Mostrar la tabla estilizada
             st.dataframe(styled_df_voltajes)
 
@@ -191,49 +283,85 @@ with st.container():
     
         with tendencia_col:
 
-            # Valor del umbral
-            umbral_corriente = 1540
-            color_linea = "orange"
+            
 
-            # Filtrar y asegurar que no haya valores NaT
-            df_corriente = df_corriente[df_corriente["Datetime"].notna()].copy()
 
-            # Crear la figura
-            fig, ax = plt.subplots(figsize=(10, 6))
+            # Lista de columnas que quieres graficar
+            columnas_a_graficar_corriente = ["I1_rms_AVG", "I2_rms_AVG", "I3_rms_AVG"]
 
-            # Líneas para I1, I2, I3
-            sns.lineplot(data=df_corriente, x="Datetime", y="I1_rms_AVG", ax=ax, errorbar=None, color="b", linewidth=2, label="I1")
-            sns.lineplot(data=df_corriente, x="Datetime", y="I2_rms_AVG", ax=ax, errorbar=None, color="r", linewidth=2, label="I2")
-            sns.lineplot(data=df_corriente, x="Datetime", y="I3_rms_AVG", ax=ax, errorbar=None, color="g", linewidth=2, label="I3")
+            # Colores personalizados para cada línea
+            colores = {
+                "I1_rms_AVG": "blue",
+                "I2_rms_AVG": "red",
+                "I3_rms_AVG": "green",
+            }
 
-            # Establecer límites válidos para el eje X
-            x_min = df_corriente["Datetime"].min()
-            x_max = df_corriente["Datetime"].max()
-            ax.set_xlim([x_min, x_max])
+            # Crear figura
+            fig_corriente = go.Figure()
 
-            # Línea horizontal punteada dinámica
-            ax.axhline(y=umbral_corriente, color=color_linea, linestyle='--', linewidth=2, label=f'Umbral: {umbral_corriente} A')
+            # Añadir una línea por cada columna
+            for columna in columnas_a_graficar_corriente:
+                fig_corriente.add_trace(go.Scatter(
+                    x=df_corriente["Datetime"],
+                    y=df_corriente[columna],
+                    mode='lines',
+                    name=columna.replace("_rms_AVG", ""),  # Opcional: limpia el nombre para mostrar bonito
+                    line=dict(color=colores.get(columna, 'black'), width=2)
+                ))
+            # Añadir las tres líneas horizontales
+            fig_corriente.update_layout(
+                shapes=[
+                    
+                    dict(type="line", xref="paper", x0=0, x1=1, yref="y", y0=valor_nominal_corriente, y1=valor_nominal_corriente,
+                        line=dict(color="grey", width=4, dash="dash"))
+                    
+                ],
+                annotations=[
+                    
+                    dict(
+                        x=1.005, y=valor_nominal_corriente,
+                        xref='paper', yref='y',
+                        text='Corriente Nominal',
+                        showarrow=False,
+                        font=dict(color="grey", size=12),
+                        xanchor='left'
+                    )
+                ]
+            )
 
-            # Personalización del gráfico
-            ax.set_title("Medida de corriente promedio", fontsize=16, fontweight="bold")
-            ax.set_xlabel("Hora", fontsize=14)
-            ax.set_ylabel("Corriente (A)", fontsize=14)
+            # Configurar el layout (títulos, ejes, grid, etc.)
+            fig_corriente.update_layout(
+                title="Gráfica corriente promedio",
+                xaxis_title="Fecha y Hora",
+                yaxis_title="Corriente (A)",
+                xaxis=dict(
+                    tickformat="%H:%M",
+                    tickmode="auto",
+                    nticks=24,  # Aproximadamente 1 tick por hora si es un día
+                    showgrid=True,
+                    gridcolor="lightgrey",
+                    tickangle=45  # Rotar las etiquetas
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor="lightgrey"
+                ),
+                legend=dict(
+                    title="Medidas",
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                margin=dict(l=40, r=120, t=80, b=40),
+                height=600,
+                template="simple_white"
+            )
 
-            # Control del formato del eje X
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            plt.xticks(rotation=45)
-
-            # Cuadrícula
-            ax.grid(True, linestyle="--", alpha=0.6)
-
-            # Leyenda sin duplicados
-            handles, labels = ax.get_legend_handles_labels()
-            by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), title="Fases y Umbral", loc="upper right")
-
-            # Mostrar el gráfico
-            st.pyplot(fig)
+            # Mostrar en Streamlit o en notebook
+            # Para Streamlit:
+            st.plotly_chart(fig_corriente, use_container_width=True)
 
             filtro_placeholder = st.empty()
         
@@ -244,10 +372,10 @@ with st.container():
             valor_desbalance_corriente = df_corriente["Iunb_AVG"].mean()  # Promedio de desbalance
 
             # Elegir color según nivel de desbalance
-            if valor_desbalance_corriente < 5:
+            if valor_desbalance_corriente < desbalance_moderado_i:
                 color_desbalance_corriente = "#90EE90"  # verde claro
                 texto_estado_corriente = "Normal"
-            elif valor_desbalance_corriente < 10:
+            elif valor_desbalance_corriente < desbalance_critico_i:
                 color_desbalance_corriente= "#FFD700"  # dorado
                 texto_estado_corriente = "Moderado"
             else:
@@ -273,37 +401,59 @@ with st.container():
             # Calcular promedios
             promedios_corriente = df_corriente[["I1_rms_AVG", "I2_rms_AVG", "I3_rms_AVG"]].mean()
 
-            # Nombres personalizados para el eje X
-            etiquetas = ['Fase 1', 'Fase 2', 'Fase 3']
-            colores = ['blue', 'red', 'green']
+           # Datos de ejemplo (reemplazar con los datos reales)
+            fases_corrientes_promedio = ["Fase A", "Fase B", "Fase C"]
+            corrientes = [round(df_corriente["I1_rms_AVG"].mean(),2), round(df_corriente["I2_rms_AVG"].mean(),2), round(df_corriente["I3_rms_AVG"].mean(),2)]  # valores promedio por fase (en A)
+            valor_nominal_corriente = 1400  # valor nominal de corriente (en A)
+            
 
-            # Crear figura y ejes correctamente
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig_promedio_corriente = go.Figure()  # crear figura vacía
 
-            # Crear el barplot
-            bars = ax.bar(etiquetas, promedios_corriente.values, color=colores)
+            # Añadir barras para cada fase
+            fig_promedio_corriente.add_trace(go.Bar(
+                x=fases_corrientes_promedio, 
+                y=corrientes,
+                text=corrientes,               # mostrar los valores sobre cada barra
+                textposition='outside',        # posición del texto por encima (fuera) de la barra
+                marker_color=["blue", "red", "green"],  # colores para cada barra
+                name="Corriente por fase", 
+                showlegend=False              # no mostrar este trace en la leyenda
+            ))
 
-            # Línea horizontal punteada dinámica (segura)
-            umbral_corriente_2 = 1540
-            color_linea_2 = "orange"
-            ax.axhline(y=umbral_corriente_2, color=color_linea_2, linestyle='--', linewidth=2, label=f'Umbral: {umbral_corriente_2} A')
+            # Línea visual
+            fig_promedio_corriente.update_layout(
+                shapes=[
+                    dict(
+                        type="line",
+                        xref="paper", x0=0, x1=1,
+                        yref="y", y0=valor_nominal_corriente, y1=valor_nominal_corriente,
+                        line=dict(color="orange", width=5, dash="solid")
+                    )
+                ]
+            )
 
-            # Etiquetas encima de las barras
-            for bar in bars:
-                yval = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.1, f'{yval:.2f}', ha='center', va='bottom', fontsize=10)
+            # Dummy trace para la leyenda
+            fig_promedio_corriente.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode="lines",
+                name=f"Umbral {valor_nominal_corriente} A",
+                line=dict(color="orange", width=5, dash="solid")
+            ))
 
-            # Etiquetas y formato
-            ax.set_title("Corriente promedio por fase", fontsize=16, fontweight="bold")
-            ax.set_ylabel('Corriente (A)', fontsize=14)
-            ax.set_xlabel('Fases', fontsize=14)
-            ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+            fig_promedio_corriente.update_layout(
+                title_text="Corriente promedio por fase",
+                xaxis_title="Fase",
+                yaxis_title="Corriente (A)",
+                yaxis=dict(showgrid=True, gridcolor="lightgray", gridwidth=1),
+                margin=dict(l=40, r=120, t=80, b=40),
+                height=600,
+                template="simple_white"
+            )
 
-            # Leyenda con solo el umbral
-            ax.legend(loc='upper right')
-
-            # Mostrar en Streamlit
-            st.pyplot(fig)
+            # Mostrar en Streamlit o en notebook
+            # Para Streamlit:
+            st.plotly_chart(fig_promedio_corriente, use_container_width=True)
 
 
         
@@ -330,45 +480,110 @@ with st.container():
         grafica_col, indicador_col = st.columns([1, 1])
     
         with grafica_col:
-            # Agrupar por hora en un nuevo df
+           # Agrupar por hora y calcular promedio
             df_hourly = df_potencia.groupby('hour')['PF_sum_AVG'].mean().reset_index()
-            # Etiquetas tipo 00:00, 01:00, ..., 23:00
+
+            # Crear etiquetas tipo 00:00, 01:00, ..., 23:00
             etiquetas_horas = [f"{h:02d}:00" for h in range(24)]
 
-            # Crear columna auxiliar de condición para colores
-            df_hourly['status'] = df_hourly['PF_sum_AVG'].apply(lambda x: 'Bajo' if x < 0.9 else 'Normal')
+            # Clasificar estado por nivel de PF
+            df_hourly['status'] = df_hourly['PF_sum_AVG'].apply(lambda x: 'Anormal' if x < umbral_factor_potencia or x >1 else 'Normal')
 
-            # Definir colores para cada categoría
-            colores = {'Bajo': 'red', 'Normal': 'blue'}
+            # Definir colores
+            colores_estado = {
+                'Anormal': 'red',
+                'Normal': 'blue'
+            }
 
-            plt.figure(figsize=(10, 6))
-            sns.barplot(data=df_hourly, x='hour', y='PF_sum_AVG', hue='status', palette=colores, dodge=False, legend=False)
+            # Mapeo de colores individuales para cada barra
+            colores_barras = [colores_estado[estado] for estado in df_hourly['status']]
 
-            plt.title('Promedio de factor de potencia por Hora',fontsize=16, fontweight="bold")
-            plt.xlabel('Hora del Día',fontsize=14)
-            plt.ylabel('Factor de Potencia',fontsize=14)
+            # Crear figura
+            fig = go.Figure()
 
-            plt.xticks(ticks=range(24), labels=etiquetas_horas, rotation=45)
-            plt.yticks(np.arange(0, 1.2, 0.05))
-            plt.grid(True, axis='y', linestyle='--', alpha=0.4)
-            plt.tight_layout()
-            st.pyplot(plt)
+            # Añadir las barras principales
+            fig.add_trace(go.Bar(
+                x=etiquetas_horas,
+                y=df_hourly['PF_sum_AVG'],
+                marker_color=colores_barras,
+                text=[f"{y:.3f}" for y in df_hourly['PF_sum_AVG']],
+                textposition='outside',
+                showlegend=False  # Las barras no deben aparecer en leyenda
+            ))
+
+            # ------ AGREGAR LEYENDA MANUAL ------
+            fig.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(size=10, color='blue'),
+                legendgroup="Normal",
+                showlegend=True,
+                name=f"Normal (≥ {umbral_factor_potencia} y ≤ 1)"
+            ))
+            fig.add_trace(go.Scatter(
+                x=[None],
+                y=[None],
+                mode='markers',
+                marker=dict(size=10, color='red'),
+                legendgroup="Anormal",
+                showlegend=True,
+                name=f"Anormal (< {umbral_factor_potencia} o > 1)"
+            ))
+            # -------------------------------------
+
+            # Layout general
+            fig.update_layout(
+                title="Promedio de factor de potencia por Hora",
+                xaxis_title="Hora del Día",
+                yaxis_title="Factor de Potencia",
+                xaxis=dict(
+                    tickmode='array',
+                    tickvals=list(range(24)),
+                    ticktext=etiquetas_horas,
+                    tickangle=45
+                ),
+                yaxis=dict(
+                    range=[0, 1.1],
+                    tick0=0,
+                    dtick=0.05,
+                    showgrid=True,
+                    gridcolor="lightgrey"
+                ),
+                legend=dict(
+                    title="Estado del PF",
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                height=600,
+                template="simple_white",
+                margin=dict(l=40, r=40, t=80, b=40)
+            )
+
+            # Mostrar en Streamlit
+            st.plotly_chart(fig, use_container_width=True)
+
+
     
         with indicador_col:
-            # Valor del gauge (podés reemplazarlo por una variable dinámica)
+            # Valor dinámico del gauge
             valor_actual = df_potencia['PF_sum_AVG'].mean().round(3)
 
-            # Construcción del gauge
-            import plotly.graph_objects as go
+            # Interpretación del valor
+            if umbral_factor_potencia <= valor_actual <= 1.0:
+                estado_texto = "✅ Estado: Normal"
+                color_estado = "green"
+            else:
+                estado_texto = "⚠️ Estado: Crítico"
+                color_estado = "red"
 
+            # Crear figura del gauge
             fig = go.Figure(go.Indicator(
-                mode="gauge+number+delta",
+                mode="gauge+number",
                 value=valor_actual,
-                delta={
-                    'reference': 0.9,
-                    'increasing': {'color': "green"},
-                    'decreasing': {'color': "red"}
-                },
                 title={
                     'text': "Promedio diario del factor de potencia",
                     'font': {'size': 24}
@@ -376,37 +591,44 @@ with st.container():
                 gauge={
                     'axis': {
                         'range': [0, 1.1],
+                        'tickmode': 'linear',
+                        'tick0': 0,
                         'dtick': 0.1,
                         'tickwidth': 1,
-                        'tickcolor': "black",
-                        'tick0': 0,
-                        'tickmode': 'linear'
+                        'tickcolor': "black"
                     },
                     'bar': {
-                        'color': "black",        # Aguja
-                        'thickness': 0.25        # Grosor de la aguja
+                        'color': "black",
+                        'thickness': 0.15    # 🔥 Hacemos la barra muy delgada (parece aguja real)
                     },
                     'bgcolor': "white",
-                    'borderwidth': 0,
-                    'bordercolor': "gray",
+                    'borderwidth': 1,
+                    'bordercolor': "lightgrey",
                     'steps': [
-                        {'range': [0, 0.8], 'color': 'red'},
-                        {'range': [0.8, 0.9], 'color': 'tomato'},
-                        {'range': [0.90, 1], 'color': 'lightgreen'},
-                        {'range': [1, 1.1], 'color': 'tomato'}
-                    ]
-                    
+                        {'range': [0, umbral_factor_potencia], 'color': '#FF4C4C'},    # rojo
+                        {'range': [umbral_factor_potencia, 1.0], 'color': '#4CAF50'},  # verde
+                        {'range': [1.0, 1.1], 'color': '#FF4C4C'}   # rojo
+                    ],
+                    'threshold': {
+                        'line': {'color': "black", 'width': 4},
+                        'thickness': 0.75,
+                        'value': valor_actual
+                    }
                 }
             ))
 
-            fig.update_layout(margin=dict(l=30, r=30, t=80, b=30))
+            fig.update_layout(
+                margin=dict(l=30, r=30, t=80, b=30),
+                height=400
+            )
 
+            # Mostrar el gauge en Streamlit
+            st.plotly_chart(fig, use_container_width=True)
 
-            # Mostrar el gráfico en Streamlit
-            st.plotly_chart(fig)
+            # Mostrar el mini-texto interpretativo
+            st.markdown(f"<h4 style='text-align: center; color:{color_estado};'>{estado_texto}</h4>", unsafe_allow_html=True)
         
-    
-        #with tabla_col:
+ 
              
     else:
         st.warning("⚠️ No hay datos cargados. Ve a la página de inicio y sube un archivo CSV.") 
