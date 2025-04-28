@@ -1,6 +1,11 @@
 import streamlit as st
 
 
+def obtener_valor_configuracion(clave, valor_default):
+    if "configuracion_alarmas" in st.session_state:
+        return st.session_state["configuracion_alarmas"].get(clave, valor_default)
+    else:
+        return valor_default
 
 
 # Set page config
@@ -8,6 +13,7 @@ st.set_page_config(page_title="Configuración", layout="wide",page_icon="⚙️"
 st.title("Configuración")
 
 st.write("Aquí puedes establecer los límites para la detección de alarmas en el monitoreo eléctrico.")
+
 
 # --------- Sección Voltajes ----------
 with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
@@ -17,7 +23,7 @@ with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
         "Límite superior de voltaje (V)",
         min_value=0.0,
         max_value=1000.0,
-        value=273.0,  # valor por defecto
+        value=obtener_valor_configuracion("limite_superior_v",0.0),  # valor por defecto
         step=1.0
     )
     
@@ -25,7 +31,7 @@ with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
         "Valor nominal de voltaje (V)",
         min_value=0.0,
         max_value=1000.0,
-        value=260.0,
+        value=obtener_valor_configuracion("valor_nominal_v",0.0),  # valor por defecto
         step=1.0
     )
     
@@ -33,7 +39,7 @@ with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
         "Límite inferior de voltaje (V)",
         min_value=0.0,
         max_value=1000.0,
-        value=247.0,
+        value=obtener_valor_configuracion("limite_inferior_v",0.0),  # valor por defecto
         step=1.0
     )
 
@@ -43,7 +49,7 @@ with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
         "Máximo porcentaje de desbalance de voltaje en estado normal (%)",
         min_value=0.0,
         max_value=100.0,
-        value=10.0,
+        value=obtener_valor_configuracion("desbalance_moderado_v",0.0),  # valor por defecto
         step=1.0
     )
 
@@ -51,7 +57,7 @@ with st.expander("🔋 Configuración de Alarmas de Voltaje", expanded=True):
         "Máximo porcentaje de desbalance de voltaje en estado critico (%)",
         min_value=0.0,
         max_value=100.0,
-        value=15.0,
+        value=obtener_valor_configuracion("desbalance_critico_v",0.0),  # valor por defecto
         step=1.0
     )
 
@@ -63,7 +69,7 @@ with st.expander("⚡ Configuración de Alarmas de Corriente", expanded=True):
         "Umbral máximo de corriente (A)",
         min_value=0.0,
         max_value=5000.0,
-        value=1540.0,
+        value=obtener_valor_configuracion("umbral_corriente",0.0),  # valor por defecto
         step=10.0
     )
 
@@ -72,7 +78,7 @@ with st.expander("⚡ Configuración de Alarmas de Corriente", expanded=True):
         "Porcentaje de desbalance de corriente en estado moderado (%)",
         min_value=0.0,
         max_value=100.0,
-        value=10.0,
+        value=obtener_valor_configuracion("desbalance_moderado_i",0.0),  # valor por defecto
         step=1.0
     )
 
@@ -80,7 +86,7 @@ with st.expander("⚡ Configuración de Alarmas de Corriente", expanded=True):
         "Porcentaje de desbalance de corriente en estado critico (%)",
         min_value=0.0,
         max_value=100.0,
-        value=15.0,
+        value=obtener_valor_configuracion("desbalance_critico_i",0.0),  # valor por defecto
         step=1.0
     )
 
@@ -92,7 +98,7 @@ with st.expander("🔥 Configuración de Alarmas de Potencia", expanded=True):
         "Umbral mínimo de factor de potencia",
         min_value=0.0,
         max_value=1.1,
-        value=0.9,
+        value=obtener_valor_configuracion("umbral_factor_potencia",0.0),  # valor por defecto
         step=0.01,
         format="%.2f"
     )

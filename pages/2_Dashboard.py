@@ -56,6 +56,8 @@ if "configuracion_alarmas" in st.session_state:
     desbalance_moderado_i = config["desbalance_moderado_i"]
     desbalance_critico_i = config["desbalance_critico_i"]
 
+    alarmas_configuradas = True
+
     # Ahora puedes usarlos en tus gráficos, alertas, lógicas, etc.
     st.write(f"⚡ Límite superior voltaje: {limite_superior_voltaje} V")
     st.write(f"⚡ Límite inferior voltaje: {limite_inferior_voltaje} V")
@@ -65,6 +67,7 @@ if "configuracion_alarmas" in st.session_state:
 
 else:
     st.warning("⚠️ No hay configuración de alarmas guardada todavía. Configúrala primero.")
+    alarmas_configuradas = False
 
 
 
@@ -75,7 +78,7 @@ st.markdown("---")
 
 with st.container():
     st.subheader("Voltajes")
-    if "df" in st.session_state and st.session_state.df is not None:
+    if "df" in st.session_state and st.session_state.df is not None and alarmas_configuradas is True:
 
         
         # Primera fila (Filtro + Tabla + Indicador)
@@ -260,7 +263,8 @@ with st.container():
 
             
             
-           
+    elif alarmas_configuradas is False:
+        st.warning("⚠️ No hay configuración de alarmas guardada. Configúrala primero.")       
             
             
     else:
@@ -272,7 +276,7 @@ st.markdown("---")
 ### ⚡ Sección de Corrientes
 with st.container():
     st.subheader("Corriente")
-    if "df" in st.session_state and st.session_state.df is not None:
+    if "df" in st.session_state and st.session_state.df is not None and alarmas_configuradas is True:
         
 
         # Filtrar el DataFrame por la fecha seleccionada en el selectbox para corriente
@@ -455,7 +459,8 @@ with st.container():
             # Para Streamlit:
             st.plotly_chart(fig_promedio_corriente, use_container_width=True)
 
-
+    elif alarmas_configuradas is False:
+        st.warning("⚠️ No hay configuración de alarmas guardada. Configúrala primero.")   
         
     else:
         st.warning("⚠️ No hay datos cargados. Ve a la página de inicio y sube un archivo CSV.")
@@ -467,7 +472,7 @@ st.markdown("---")
 ### 🔥 Sección de Potencia
 with st.container():
     st.subheader("Potencia")
-    if "df" in st.session_state and st.session_state.df is not None:
+    if "df" in st.session_state and st.session_state.df is not None and alarmas_configuradas is True:
         # Filtrar el DataFrame por la fecha seleccionada en el selectbox para potencia
         df_potencia=df[df["Date"]==fecha_seleccionada]
         #Modificamos la columna Time para ajustarla en fomrato datetime
@@ -628,7 +633,8 @@ with st.container():
             # Mostrar el mini-texto interpretativo
             st.markdown(f"<h4 style='text-align: center; color:{color_estado};'>{estado_texto}</h4>", unsafe_allow_html=True)
         
- 
+    elif alarmas_configuradas is False:
+        st.warning("⚠️ No hay configuración de alarmas guardada. Configúrala primero.")   
              
     else:
         st.warning("⚠️ No hay datos cargados. Ve a la página de inicio y sube un archivo CSV.") 
