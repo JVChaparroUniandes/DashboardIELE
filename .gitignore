@@ -1,0 +1,22 @@
+# Streamlit
+.streamlit/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+env/
+venv/
+*.sqlite3
+*.db
+
+# VS Code
+.vscode/
+
+# Otros
+.DS_Store
+*.log
+*.bak
