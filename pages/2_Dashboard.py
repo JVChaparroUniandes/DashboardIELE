@@ -87,10 +87,6 @@ with st.container():
             df_voltajes = df[df["Date"] == fecha_seleccionada].copy()
             df_voltajes = df_voltajes[df_voltajes["Datetime"].notna()]  # Evita NaT en eje X
 
-            # Variables que controlan las líneas horizontales
-            limite_superior_voltaje = 273  # Var1
-            valor_nominal_voltaje = 260    # Var2
-            limite_inferior_voltaje = 247  # Var3
 
             # Lista de columnas que quieres graficar
             columnas_a_graficar = ["U1_rms_AVG", "U2_rms_AVG", "U3_rms_AVG"]
@@ -405,7 +401,7 @@ with st.container():
            # Datos de ejemplo (reemplazar con los datos reales)
             fases_corrientes_promedio = ["Fase A", "Fase B", "Fase C"]
             corrientes = [round(df_corriente["I1_rms_AVG"].mean(),2), round(df_corriente["I2_rms_AVG"].mean(),2), round(df_corriente["I3_rms_AVG"].mean(),2)]  # valores promedio por fase (en A)
-            valor_nominal_corriente = 1400  # valor nominal de corriente (en A)
+            
             
 
             fig_promedio_corriente = go.Figure()  # crear figura vacía
