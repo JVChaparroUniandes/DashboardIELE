@@ -4,6 +4,9 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import time
 
+
+
+
 # Set page config
 st.set_page_config(page_title="Dashboard", layout="wide",page_icon="📊")
 
@@ -182,6 +185,7 @@ with st.container():
             # Para Streamlit:
             st.plotly_chart(fig_voltaje, use_container_width=True)
             filtro_placeholder = st.empty()
+
         
         with desbalance_col:
             st.write("Desbalance de voltajes")
@@ -497,10 +501,10 @@ with st.container():
             colores_barras = [colores_estado[estado] for estado in df_hourly['status']]
 
             # Crear figura
-            fig = go.Figure()
+            fig_potencia = go.Figure()
 
             # Añadir las barras principales
-            fig.add_trace(go.Bar(
+            fig_potencia.add_trace(go.Bar(
                 x=etiquetas_horas,
                 y=df_hourly['PF_sum_AVG'],
                 marker_color=colores_barras,
@@ -510,7 +514,7 @@ with st.container():
             ))
 
             # ------ AGREGAR LEYENDA MANUAL ------
-            fig.add_trace(go.Scatter(
+            fig_potencia.add_trace(go.Scatter(
                 x=[None],
                 y=[None],
                 mode='markers',
@@ -519,7 +523,7 @@ with st.container():
                 showlegend=True,
                 name=f"Normal (≥ {umbral_factor_potencia} y ≤ 1)"
             ))
-            fig.add_trace(go.Scatter(
+            fig_potencia.add_trace(go.Scatter(
                 x=[None],
                 y=[None],
                 mode='markers',
@@ -531,7 +535,7 @@ with st.container():
             # -------------------------------------
 
             # Layout general
-            fig.update_layout(
+            fig_potencia.update_layout(
                 title="Promedio de factor de potencia por Hora",
                 xaxis_title="Hora del Día",
                 yaxis_title="Factor de Potencia",
@@ -562,7 +566,7 @@ with st.container():
             )
 
             # Mostrar en Streamlit
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig_potencia, use_container_width=True)
 
 
     
